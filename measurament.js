@@ -1,31 +1,40 @@
-const AWS = require('aws-sdk');
+const { Client } = require('pg');
 
-// Configura la región de AWS y crea un cliente de DynamoDB
-AWS.config.update({ region: 'us-east-1 }); // Reemplaza 'tu-region' con la región de tu DynamoDB
-const dynamoDB = new AWS.DynamoDB.DocumentClient();
+// Configura la cadena de conexión a tu base de datos Aurora PostgreSQL
+const dbConfig = {
+  user: 'nombre-de-usuario',
+  host: 'nombre-del-endpoint-de-tu-db',
+  database: 'samaydb',
+  password: 'tu-contraseña',
+  port: 5432,
+  ssl: {
+    rejectUnauthorized: false // Deshabilita la verificación de certificado SSL en entornos de desarrollo
+  }
+};
 
 exports.handler = async (event) => {
   try {
     // Parsea el cuerpo del evento como un objeto JSON
     const requestBody = JSON.parse(event.body);
 
-    // Define los atributos para la inserción en la tabla
-    const item = {
-      ID: requestBody.ID,
-      name: requestBody.name,
-      attribute1: requestBody.attribute1,
-      attribute2: requestBody.attribute2,
-      attribute3: requestBody.attribute3
-    };
+    // Crea un cliente PostgreSQL
+    const client = new Client(dbConfig);
+    await client.connect();
 
-    // Parámetros para la operación de inserción
-    const params = {
-      TableName: 'nombre-de-tu-tabla', // Reemplaza 'nombre-de-tu-tabla' con el nombre de tu tabla en DynamoDB
-      Item: item
-    };
+    // Ejecuta la consulta de inserción
+    const result = await client.query(
+      `INSERT INTO nombre-de-tu-tabla (ID, name, attribute1, attribute2, attribute3) VALUES ($1, $2, $3, $4, $5)`,
+      [
+        requestBody.ID,
+        requestBody.name,
+        requestBody.attribute1,
+        requestBody.attribute2,
+        requestBody.attribute3
+      ]
+    );
 
-    // Realiza la inserción en la tabla
-    await dynamoDB.put(params).promise();
+    // Cierra la conexión con la base de datos
+    await client.end();
 
     // Respuesta exitosa
     return {
